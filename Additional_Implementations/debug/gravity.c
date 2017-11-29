@@ -71,8 +71,8 @@ int gravity_sign (const struct gravity_sk *sk, struct gravity_sign *sign, const 
 #endif
 
     /* Generate "randomness" from message and secret salt */
-    hashcpy (&buf[0], msg);
-    hashcpy (&buf[1], &sk->salt);
+    hashcpy (&buf[0], &sk->salt);
+    hashcpy (&buf[1], msg);
     hash_2N_to_N (&sign->rand, buf);
 
 #ifdef DEBUG
@@ -80,7 +80,7 @@ int gravity_sign (const struct gravity_sk *sk, struct gravity_sign *sign, const 
 #endif
 
     /* Generate address and PORST indices */
-    pors_randsubset (&sign->rand, &buf[0], &address.index, &subset);
+    pors_randsubset (&sign->rand, msg, &address.index, &subset);
 
 #ifdef DEBUG
     PINTS ("gravity_sign: subset", (int *)&subset, PORS_k);
