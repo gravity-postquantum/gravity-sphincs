@@ -183,7 +183,7 @@ void pors_randsubset (const struct hash *rand,
 
     while (count < PORS_k) {
         /* ok to take mod since T is a power of 2 */
-        index = U8TO32 (randstream + offset) % PORS_t;
+        index = U8TO32 (randstream + HASH_SIZE + offset) % PORS_t;
         offset += BYTES_PER_INDEX;
         duplicate = 0;
         for (i = 0; i < count; ++i)

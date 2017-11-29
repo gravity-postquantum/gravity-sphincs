@@ -7,6 +7,10 @@
 #include "merkle.h"
 #include <stdlib.h>
 
+#ifdef DEBUG
+#include "debug.h"
+#endif
+
 /* Naive PORS without Merkle tree */
 void pors_gensk (const struct hash *key, const struct address *address, struct pors_sk *sk) {
     uint8_t iv[16];
@@ -88,6 +92,10 @@ int octoporst_sign (const struct pors_sk *sk,
     /* Sort subset */
     sort_subset (subset);
 
+#ifdef DEBUG
+    PINTS ("octoporst_sign: sorted subset", (int *)subset, PORS_k);
+#endif
+
     /* Values */
     pors_sign (sk, &sign->s, subset);
 
@@ -114,6 +122,10 @@ int octoporst_extract (struct porst_pk *pk,
 
     /* Sort subset */
     sort_subset (subset);
+
+#ifdef DEBUG
+    PINTS ("octoporst_extract: sorted subset", (int *)subset, PORS_k);
+#endif
 
     /* Compute leaves */
     hash_parallel (tmp, sign->s.s, PORS_k);
@@ -185,9 +197,13 @@ void pors_randsubset (const struct hash *rand,
     }
     *address = addr;
 
+#ifdef DEBUG
+    PINT ("pors_randsubset: addr", addr);
+#endif
+
     while (count < PORS_k) {
         /* ok to take mod since T is a power of 2 */
-        index = U8TO32 (randstream + offset) % PORS_t;
+        index = U8TO32 (randstream + HASH_SIZE + offset) % PORS_t;
         offset += BYTES_PER_INDEX;
         duplicate = 0;
         for (i = 0; i < count; ++i)

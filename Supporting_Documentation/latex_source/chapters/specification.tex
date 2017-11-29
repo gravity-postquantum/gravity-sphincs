@@ -223,8 +223,8 @@ The function $\PORSsf : \Bn \times \Bn \to \mathbb{N} \times T^k$ takes as input
     \begin{itemize}
     \item increment $j \gets j+1$,
     \item compute $b \gets G(g, \incaddr(a,j))$,
-    \item split $b$ into $\nu = \lfloor n / \log_2{t} \rfloor$ blocks of $\log_2{t}$ bits, as $b_i = \substr(b, (i-1)\log_2{t}, \log_2{t})$,
-    \item for $i \in \{1, \ldots, \nu\}$ interpret $b_i$ as the big-endian encoding of an integer $\overline{b_i} \in T$,
+    \item split $b$ into $\nu = \lfloor n / 32 \rfloor$ blocks of $32$ bits, as $b_i = \substr(b, 32(i-1), 32)$,
+    \item for $i \in \{1, \ldots, \nu\}$ interpret $b_i$ as the big-endian encoding of an integer $\overline{b_i} \in T$ (as $\overline{b_i} = b_i \mod t$),
     \item for $i \in \{1, \ldots, \nu\}$, if $|X| < k$ compute $X \gets \unique(X, \overline{b_i})$.
     \end{itemize}
 \item Compute $(x_1, \ldots, x_k) \gets \sorted(X)$.

@@ -43,5 +43,5 @@
 #define GRAVITY_ERR_BATCH 3
 
 #define U8TO32(p)                                                              \
-    (((uint32_t) ((p)[3]) << 24) | ((uint32_t) ((p)[2]) << 16) |               \
-     ((uint32_t) ((p)[1]) << 8) | ((uint32_t) ((p)[0])))
+    (((uint32_t) ((p)[0]) << 24) | ((uint32_t) ((p)[1]) << 16) |               \
+     ((uint32_t) ((p)[2]) << 8) | ((uint32_t) ((p)[3])))
