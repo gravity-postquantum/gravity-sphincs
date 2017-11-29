@@ -14,19 +14,19 @@ void wots_chain (const struct hash *src, struct hash *dst, int count) {
 void wots_gensk (const struct hash *key, const struct address *address, struct wots_sk *sk) {
     uint8_t iv[16];
 
-    iv[0] = address->index & 0xFF;
-    iv[1] = (address->index >> 8) & 0xFF;
-    iv[2] = (address->index >> 16) & 0xFF;
-    iv[3] = (address->index >> 24) & 0xFF;
-    iv[4] = (address->index >> 32) & 0xFF;
-    iv[5] = (address->index >> 40) & 0xFF;
-    iv[6] = (address->index >> 48) & 0xFF;
-    iv[7] = (address->index >> 56) & 0xFF;
+    iv[0] = (address->index >> 56) & 0xFF;
+    iv[1] = (address->index >> 48) & 0xFF;
+    iv[2] = (address->index >> 40) & 0xFF;
+    iv[3] = (address->index >> 32) & 0xFF;
+    iv[4] = (address->index >> 24) & 0xFF;
+    iv[5] = (address->index >> 16) & 0xFF;
+    iv[6] = (address->index >> 8) & 0xFF;
+    iv[7] = address->index & 0xFF;
 
-    iv[8] = address->layer & 0xFF;
-    iv[9] = (address->layer >> 8) & 0xFF;
-    iv[10] = (address->layer >> 16) & 0xFF;
-    iv[11] = (address->layer >> 24) & 0xFF;
+    iv[8] = (address->layer >> 24) & 0xFF;
+    iv[9] = (address->layer >> 16) & 0xFF;
+    iv[10] = (address->layer >> 8) & 0xFF;
+    iv[11] = address->layer & 0xFF;
 
     /* Counter */
     iv[12] = 0;

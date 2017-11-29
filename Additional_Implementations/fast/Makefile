@@ -46,7 +46,7 @@ cloc:
 			cloc $(wildcard *.c) $(wildcard *.h)
 
 clean:
-			rm -f bench *.dSYM 
+			rm -f bench *.dSYM *.o
 
 .PHONY: clean format analyze cloc bench
 
