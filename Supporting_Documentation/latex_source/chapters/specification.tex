@@ -1,0 +1,438 @@
+\chapter{Specification}\label{chap:specification}
+
+This chapter includes a formal specification of \gravity. 
+For more context and an introduction to hash-based signature schemes, we refer to~\cite{masters,ctrsapaper}.
+
+\section{Parameters}
+
+An instance of \gravity{} requires the following parameters:
+\begin{itemize}
+\item \textbf{Hash output bit length} $n$, a positive integer
+\item \textbf{Winternitz depth} $w$, a power of two such that $w \ge 2$ and $\log_2{w}$ divides $n$
+\item \textbf{PORS set size} $t$, a positive power of two
+\item \textbf{PORS subset size} $k$, a positive integer such that $k \le t$
+\item \textbf{Internal Merkle tree height} $h$, a positive integer
+\item \textbf{Number of layers of internal Merkle trees} $d$, a non-negative integer
+\item \textbf{Cache height} $c$, a non-negative integer
+\item \textbf{Batching height} $b$, a non-negative integer
+\item \textbf{Message space} $\calM$, usually a subset of bit strings ${\{0,1\}}^*$
+\end{itemize}
+%
+From these parameters are derived the following values, where $\Bn = {\{0,1\}}^n$ denotes the set of $n$-bit strings:
+\begin{itemize}
+\item \textbf{Winternitz width} $\ell = \mu + \lfloor \log_2{(\mu(w-1))} / \log_2{w} \rfloor + 1$ where $\mu = n / \log_2{w}$
+\item \textbf{PORS set} $T = \{0, \ldots, t-1\}$
+\item \textbf{Address space} $\calA = \{0, \ldots, d\} \times \{0, \ldots, 2^{c+dh}-1\} \times \{0, \ldots, \max(\ell, t)-1\}$
+\item \textbf{Public key space} $\calPK = \Bn$
+\item \textbf{Secret key space} $\calSK = \Bn^2$
+\item \textbf{Signature space} $\calSG = \Bn \times \Bn^k \times \Bn^{\le k(\log_2{t} - \lfloor \log_2{k} \rfloor)} \times {(\Bn^\ell \times \Bn^h)}^d \times \Bn^c$
+\item \textbf{Batched signature space} $\calSG_B = \Bn^b \times \{0, \ldots, 2^b-1\} \times \calSG$
+\item \textbf{Public key size}, of $n$ bits
+\item \textbf{Secret key size}, of $2n$ bits
+\item \textbf{Maximal signature size}, of\[\sigsz = (1 + k + k(\log_2{t} - \lfloor \log_2{k} \rfloor) + d(\ell+h) + c)n \text{ bits}\]
+\item \textbf{Maximal batched signature size}, of $\sigsz + bn + b$ bits
+\end{itemize}
+%
+
+
+\section{Primitives}
+
+An instance of \gravity{} needs four primitives, which depend on the parameters $n$ and $\calM$:
+\begin{itemize}
+\item A length-preserving hash function $F : \Bn \to \Bn$
+\item A length-halving hash function $H : \Bn^2 \to \Bn$
+\item A pseudorandom function $G : \Bn \times \calA \to \Bn$ (takes as input a seed and an address)
+\item A general-purpose hash function $H^* : \calM \to \Bn$
+\end{itemize}
+
+
+\section{Internal Algorithms}
+
+We first define algorithms that are building blocks of \gravity{}.
+
+\subsection{Operations on Addresses}
+
+Within the hyper-tree, each $\WOTS$ and $\PORST$ instance is assigned a unique address in order to generate its secret values on demand.
+Each address contains:
+\begin{itemize}
+\item A layer index $0 \le i \le d$ in the hyper-tree, where $0$ is the root layer, $d-1$ is the last $\WOTS$ layer and $d$ is the $\PORST$ layer;
+\item An instance index $j$ in the layer, with $0 \le j < 2^{c+(i+1)h}$ if $i < d$ and $0 \le j < 2^{c+dh}$ if $i = d$;
+\item A counter $\lambda$ within the instance, with $0 \le \lambda < \ell$ if $i < d$ and $0 \le \lambda < t$ if $i = d$.
+\end{itemize}
+%
+We define the following functions to manipulate addresses.
+\begin{itemize}
+\item $\mkaddr : \{0, \ldots, d\} \times \mathbb{N} \to \calA$, which takes as input a layer $i \in \{0, \ldots, d\}$ and an index $j \in \mathbb{N}$ and returns the address $a = (i, j \mod 2^{c+dh}, 0) \in \calA$.
+\item $\incaddr : \calA \times \mathbb{N} \to \calA$, which takes as input an address $a = (i, j, \lambda)$ and an integer $x$ and returns the address $a' = (i, j, \lambda+x) \in \calA$ with the counter incremented by $x$.
+\end{itemize}
+
+\subsection{L-Tree}
+
+The function $\ltree : \Bn^+ \to \Bn$ takes as input a sequence of hashes $x_i \in \Bn$ and returns the associated L-tree root $r \in \Bn$, defined by recurrence as follows.
+\[\begin{cases}
+\ltree(x_1) = x_1 \\
+\ltree(x_1, \ldots, x_{2i+2}) = \ltree(H(x_1, x_2), \ldots, H(x_{2i+1}, x_{2i+2})) \\
+\ltree(x_1, \ldots, x_{2i+3}) = \ltree(H(x_1, x_2), \ldots, H(x_{2i+1}, x_{2i+2}), x_{2i+3})
+\end{cases}
+\]
+
+\subsection{Winternitz Checksum}
+
+The function $\chksum : \Bn \to {\{0, \ldots, w-1\}}^\ell$ takes as input a hash $x \in \Bn$ and returns $\ell$ integers $x_i$, computed as follows.
+
+\begin{itemize}
+\item For $i \in \{1, \ldots, \mu\}$ compute $z_i \gets \substr(x, (i-1)\log_2{w}, \log_2{w})$, where $\substr(x, j, m)$ denotes the substring of $x$ of length $m$ bits starting at bit index $0 \le j < |x|$.
+\item For $i \in \{1, \ldots, \mu\}$ interpret $z_i$ as the big-endian encoding of a number $0 \le x_i < w$.
+\item Compute the checksum $C = \sum_{i=1}^\mu w-1-x_i$.
+\item For $i \in \{\mu+1, \ldots, \ell\}$ compute $x_i = \lfloor C / w^{i-\mu-1} \rfloor \mod w$.
+In other words, $(x_{\mu+1}, \ldots, x_\ell)$ is the base-$w$ little-endian encoding of the checksum $C$.
+\end{itemize}
+
+\subsection{Winternitz Public Key Generation}
+
+The function $\WOTSgen : \Bn \times \calA \to \Bn$ takes as input a secret $\seed \in \Bn$ and a base address $a \in \calA$, and outputs the associated Winternitz public key $p \in \Bn$, computed as follows.
+
+\begin{itemize}
+\item For $i \in \{1, \ldots, \ell\}$ compute the secret value $s_i \gets G(\seed, \incaddr(a, i-1))$.
+\item For $i \in \{1, \ldots, \ell\}$ compute the public value $p_i \gets F^{w-1}(s_i)$ where the $F^{w-1}$ denotes the function $F$ iterated $w-1$ times.
+\item Compute $p \gets \ltree(p_1, \ldots, p_\ell)$.
+\end{itemize}
+
+\subsection{Winternitz Signature}
+
+The function $\WOTSsign : \Bn \times \calA \times \Bn \to \Bn^\ell$ takes as input a secret $\seed \in \Bn$, a base address $a \in \calA$ and a hash $x \in \Bn$, and outputs the associated Winternitz signature $\sigma \in \Bn^\ell$, computed as follows.
+
+\begin{itemize}
+\item For $i \in \{1, \ldots, \ell\}$ compute the secret value $s_i \gets G(\seed, \incaddr(a, i-1))$.
+\item Compute $(x_1, \ldots, x_\ell) \gets \chksum(x)$.
+\item For $i \in \{1, \ldots, \ell\}$ compute the signature value $\sigma_i \gets F^{x_i}(s_i)$.
+\end{itemize}
+
+\subsection{Winternitz Public Key Extraction}
+
+The function $\WOTSextract : \Bn \times \Bn^\ell \to \Bn$ takes as input a hash $x \in \Bn$ and a signature $\sigma \in \Bn^\ell$, and outputs the associated Winternitz public key $p \in \Bn$, computed as follows.
+
+\begin{itemize}
+\item Compute $(x_1, \ldots, x_\ell) \gets \chksum(x)$.
+\item For $i \in \{1, \ldots, \ell\}$ compute the public value $p_i \gets F^{w-1-x_i}(\sigma_i)$.
+\item Compute $p \gets \ltree(p_1, \ldots, p_\ell)$.
+\end{itemize}
+
+\subsection{Merkle Tree Root}
+
+The function $\mroot_h : \Bn^{2^h} \to \Bn$ takes as input $2^h$ leaf hashes $x_i$, and outputs the associated Merkle tree root $r \in \Bn$.
+It is defined by recurrence on $h$ as:
+
+\begin{itemize}
+\item $\mroot_0(x_0) = x_0$,
+\item $\mroot_{h+1}(x_0, x_1, \ldots, x_{2i}, x_{2i+1}) = \mroot_h(H(x_0, x_1), \ldots, H(x_{2i}, x_{2i+1}))$.
+\end{itemize}
+
+\subsection{Merkle Tree Authentication}
+
+The function $\mauth_h : \Bn^{2^h} \times \{0, \ldots, 2^h-1\} \to \Bn^h$ takes as input $2^h$ leaf hashes $x_i$ and a leaf index $0 \le j < 2^h$, and outputs the associated Merkle tree authentication path $(a_1, \ldots, a_h) \in \Bn^h$.
+It is defined by recurrence on $h$ as:
+
+\begin{itemize}
+\item $\mauth_1(x_0, x_1, j) = a_1 \gets x_{j \oplus 1}$ where $\oplus$ denotes the bitwise XOR operation on non-negative integers,
+\item $\mauth_{h+1}(x_0, x_1, \ldots, x_{2i}, x_{2i+1}, j)$ is \[\begin{cases}
+        a_1 \gets x_{j \oplus 1} \\
+        a_2, \ldots, a_{h+1} \gets \mauth_h(H(x_0, x_1), \ldots, H(x_{2i}, x_{2i+1}), \lfloor j/2 \rfloor)
+    \end{cases}\]
+\end{itemize}
+
+\subsection{Merkle Tree Root Extraction}
+
+The function $\mextract_h : \Bn \times \{0, \ldots, 2^h-1\} \times \Bn^h \to \Bn$ takes as input a leaf hash $x \in \Bn$, a leaf index $0 \le j < 2^h$ and an authentication path $(a_1, \ldots, a_h) \in \Bn^h$, and outputs the associated Merkle tree root $r \in \Bn$.
+It is defined by recurrence on $h$ as:
+
+\begin{itemize}
+\item $\mextract_0(x, j) = x$,
+\item $\mextract_{h+1}(x, j, a_1, \ldots, a_{h+1}) = \mextract_h(x', \lfloor j/2 \rfloor, a_2, \ldots, a_{h+1})$ where \[x' = \begin{cases}H(x, a_1) & \text{if } j \mod 2 = 0 \\ H(a_1, x) & \text{if } j \mod 2 = 1\end{cases}\]
+\end{itemize}
+
+\subsection{Octopus Authentication}
+
+The function $\octauth_h : \Bn^{2^h} \times {\{0, \ldots, 2^h-1\}}^k \to \Bn^* \times \Bn$ takes as input $2^h$ leaf hashes $x_i$ and $1 \le k \le 2^h$ distinct leaf indices $0 \le j_i < 2^h$ sorted in increasing order, and outputs the associated octopus authentication nodes $oct \in \Bn^*$ and the octopus root $r \in \Bn$.
+It is defined by recurrence on $h$ as:
+
+\begin{itemize}
+\item $\octauth_0(x_0, j_1) = (\emptyset, x_0)$,
+\item $\octauth_{h+1}(x_0, x_1, \ldots, x_{2i}, x_{2i+1}, j_1, \ldots, j_k)$ is computed as
+%
+\[\begin{cases}
+j_1', \ldots, j_\kappa' \gets \unique(\lfloor j_1/2 \rfloor, \ldots, \lfloor j_k/2 \rfloor) \\
+oct', r \gets \octauth_h(H(x_0, x_1), \ldots, H(x_{2i}, x_{2i+1}), j_1', \ldots, j_\kappa') \\
+z_1, \ldots, z_{2\kappa - k} \gets (j_1 \oplus 1, \ldots, j_k \oplus 1) \setminus (j_1, \ldots, j_k) \\
+a_1, \ldots, a_{2\kappa - k} \gets (x_{z_1}, \ldots, x_{z_{2\kappa - k}}) \\
+oct \gets (a_1, \ldots, a_{2\kappa - k}, oct')
+\end{cases}\]
+where $\unique()$ removes duplicates in a sequence, and $A \setminus B$ denotes the set difference.
+\end{itemize}
+
+In other words, $\octauth_h$ is a collective Merkle tree authentication for multiple leaves, that takes care to remove redundant authentication nodes.
+
+\subsection{Octopus Root Extraction}
+
+The function $\octextract_{h,k} : \Bn^k \times {\{0, \ldots, 2^h-1\}}^k \times \Bn^* \to \Bn \cup \{\bot\}$ (with $1 \le k \le 2^h$) takes as input $k$ leaf hashes $x_i \in \Bn$, $k$ leaf indices $0 \le j_i < 2^h$ and an authentication octopus $oct \in \Bn^*$, and outputs the associated Merkle tree root $r \in \Bn$, or $\bot$ if the number of hashes in the authentication octopus is invalid.
+It is defined by recurrence on $h$ as:
+
+\begin{itemize}
+\item $\octextract_{0,1}(x_1, j_1, oct) = \begin{cases}x_1 & \text{if } oct = \emptyset \\ \bot & \text{otherwise} \end{cases}$,
+\item $\octextract_{h+1,k}(x_1, \ldots, x_k, j_1, \ldots, j_k, oct)$ is computed as
+%
+\[\begin{cases}
+j_1', \ldots, j_\kappa' \gets \unique(\lfloor j_1/2 \rfloor, \ldots, \lfloor j_k/2 \rfloor) \\
+L \gets \octlayer((x_1, j_1), \ldots, (x_k, j_k), oct) \\
+\bot & \text{if } L = \bot \\
+\octextract_{h,\kappa}(x'_1, \ldots, x'_\kappa, j_1', \ldots, j_\kappa', oct') & \text{if } L = (x'_1, \ldots, x'_\kappa, oct')
+\end{cases}\]
+\end{itemize}
+%
+where $\octlayer()$ is defined by recurrence as:
+%
+\begin{itemize}
+\item $\octlayer(x_1, j_1, oct) = \begin{cases}
+        \bot & \text{if } oct = \emptyset \\
+        H(x_1, a), oct' & \text{if } oct = (a, oct') \wedge j_1 \mod 2 = 0 \\
+        H(a, x_1), oct' & \text{if } oct = (a, oct') \wedge j_1 \mod 2 = 1
+    \end{cases}$
+\item $\octlayer(x_1, j_1, x_2, j_2, \ldots, x_k, j_k, oct)$ is
+%
+\[\begin{cases}
+    H(x_1, x_2), \octlayer(x_3, j_3, \ldots, x_k, j_k, oct) & \text{if } j_1 \oplus 1 = j_2 \\
+    \bot & \text{if } j_1 \oplus 1 \ne j_2 \wedge oct = \emptyset \\
+    H(x_1, a), \octlayer(x_2, j_2, \ldots, x_k, j_k, oct') & \text{if } oct = (a, oct') \wedge j_1 \mod 2 = 0 \\
+    H(a, x_1), \octlayer(x_2, j_2, \ldots, x_k, j_k, oct') & \text{if } oct = (a, oct') \wedge j_1 \mod 2 = 1
+\end{cases}\]
+\end{itemize}
+
+In other words, $\octlayer()$ consumes authentication values from the octopus $oct$ along with nodes $x_i$ and their indices $j_i$ to obtain nodes at the upper layer.
+
+\subsection{PRNG to Obtain a Random Subset}
+
+The function $\PORSsf : \Bn \times \Bn \to \mathbb{N} \times T^k$ takes as input a salt $s \in \Bn$ and a hash $x \in \Bn$, and outputs a hyper-tree index $\lambda \in \mathbb{N}$ and $k$ distinct indices $x_i$, computed as follows.
+
+\begin{itemize}
+\item Compute $g \gets H(s, x)$.
+\item Let $a \gets \mkaddr(0,0)$.
+\item Compute $b \gets G(g, a)$ and interpret it as the big-endian encoding of an integer $\beta \in \{0, \ldots, 2^n-1\}$.
+\item Compute $\lambda \gets \beta \mod 2^{c+dh}$. In other words, $\lambda$ is the big-endian interpretation of the $c+dh$ last bits of the block $b$.
+\item Initialize $X \gets \emptyset$ and $j \gets 0$.
+\item While $|X| < k$ do the following:
+    \begin{itemize}
+    \item increment $j \gets j+1$,
+    \item compute $b \gets G(g, \incaddr(a,j))$,
+    \item split $b$ into $\nu = \lfloor n / \log_2{t} \rfloor$ blocks of $\log_2{t}$ bits, as $b_i = \substr(b, (i-1)\log_2{t}, \log_2{t})$,
+    \item for $i \in \{1, \ldots, \nu\}$ interpret $b_i$ as the big-endian encoding of an integer $\overline{b_i} \in T$,
+    \item for $i \in \{1, \ldots, \nu\}$, if $|X| < k$ compute $X \gets \unique(X, \overline{b_i})$.
+    \end{itemize}
+\item Compute $(x_1, \ldots, x_k) \gets \sorted(X)$.
+\end{itemize}
+
+\subsection{PORST Signature}
+
+The function $\PORSTsign : \Bn \times \calA \times T^k \to \Bn^k \times \Bn^* \times \Bn$ takes as input a secret $\seed \in \Bn$, a base address $a \in \calA$ and $k$ sorted indices $x_i \in T$, and outputs the associated PORST signature $(\sigma, oct) \in \Bn^k \times \Bn^*$ and PORST public key $p \in \Bn$, computed as follows.
+
+\begin{itemize}
+\item For $i \in \{1, \ldots, t\}$ compute the secret value $s_i \gets G(\seed, \incaddr(a, i-1))$.
+\item For $j \in \{1, \ldots, k\}$ set the signature value $\sigma_j = s_{x_j}$.
+\item Compute the authentication octopus and root as\[oct, p \gets \octauth_{\log_2{t}}(s_1, \ldots, s_t, x_1, \ldots, x_k)\]
+\end{itemize}
+
+\subsection{PORST Public Key Extraction}
+
+The function $\PORSTextract : T^k \times \Bn^k \times \Bn^* \to \Bn \cup \{\bot\}$ takes as input $k$ indices $x_i \in T$ and a PORST signature $(\sigma, oct) \in \Bn^k \times \Bn^*$, and outputs the associated PORST public key $p \in \Bn$, or $\bot$ if the authentication octopus is invalid, computed as follows.
+
+\begin{itemize}
+\item Compute the octopus root $p \gets \octextract_{\log_2{t},k}(\sigma, x_1, \ldots, x_k, oct)$.
+\end{itemize}
+
+
+\section{Signature Scheme}
+
+We now specify the $(\calKG, \calS, \calV)$ algorithms for \gravity{}, as well as batched variants $(\calKG, \calS_B, \calV_B)$.
+To simplify, we specify them without secret key caching by the signer.
+Indeed, this caching optimization is internal to the signer~--~to increase signing speed~--~and does not change the public results (public key, signature).
+We discuss this optimization in \S\ref{sec:caching}.
+
+\subsection{Key Generation}
+
+$\calKG$ takes as input $2n$ bits of randomness and outputs the secret key $sk \in \Bn^2$ and the public key $pk \in \Bn$.
+
+\begin{itemize}
+\item Generate the secret key from $2n$ bits of randomness $sk = (\seed, \salt) \getsr \Bn^2$.
+\item For $0 \le i < 2^{c+h}$ generate a Winternitz public key
+    \[x_i \gets \WOTSgen(\seed, \mkaddr(0, i))\]
+\item Generate the public key $pk \gets \mroot_{c+h}(x_0, \ldots, x_{2^{c+h}-1})$.
+\end{itemize}
+
+\subsection{Signature}
+
+$\calS$ takes as input a hash $m \in \Bn$ and a secret key $sk = (\seed, \salt)$, and outputs a signature computed as follows.
+
+\begin{itemize}
+\item Compute the public salt $s \gets H(\salt, m)$.
+\item Compute the hyper-tree index and random subset as $j, (x_1, \ldots, x_k) \gets \PORSsf(s, m)$.
+\item Compute the $\PORST$ signature and public key
+    \[(\sigma_d, oct, p) \gets \PORSTsign(\seed, \mkaddr(d, j), x_1, \ldots, x_k)\]
+\item For $i \in \{d-1, \ldots, 0\}$ do the following:
+    \begin{itemize}
+    \item compute the $\WOTS$ signature $\sigma_i \gets \WOTSsign(\seed, \mkaddr(i, j), p)$,
+    \item compute $p \gets \WOTSextract(p, \sigma_i)$,
+    \item set $j' \gets \lfloor j / 2^h \rfloor$,
+    \item for $u \in \{0, \ldots, 2^h-1\}$ compute the $\WOTS$ public key
+        \[p_u \gets \WOTSgen(\seed, \mkaddr(i, 2^h j' + u))\]
+    \item compute the Merkle authentication $A_i \gets \mauth_h(p_0, \ldots, p_{2^h-1}, j - 2^h j')$,
+    \item set $j \gets j'$.
+    \end{itemize}
+\item For $0 \le u < 2^{c+h}$ compute the $\WOTS$ public key
+    \[p_u \gets \WOTSgen(\seed, \mkaddr(0, u))\]
+\item Compute the Merkle authentication
+    \[(a_1, \ldots, a_{h+c}) \gets \mauth_{h+c}(p_0, \ldots, p_{2^{h+c}-1}, 2^h j)\]
+\item Set $A_c \gets (a_{h+1}, \ldots, a_{h+c})$.
+\item The signature is $(s, \sigma_d, oct, \sigma_{d-1}, A_{d-1}, \ldots, \sigma_0, A_0, A_c)$.
+\end{itemize}
+
+\subsection{Verification}
+
+$\calV$ takes as input a hash $m \in \Bn$, a public key $pk \in \Bn$ and a signature
+\[(s, \sigma_d, oct, \sigma_{d-1}, A_{d-1}, \ldots, \sigma_0, A_0, A_c)\]
+and verifies it as follows.
+
+\begin{itemize}
+\item Compute the hyper-tree index and random subset as $j, (x_1, \ldots, x_k) \gets \PORSsf(s, m)$.
+\item Compute the $\PORST$ public key $p \gets \PORSTextract(x_1, \ldots, x_k, \sigma_d, oct)$.
+\item If $p = \bot$, then abort and return $0$.
+\item For $i \in \{d-1, \ldots, 0\}$ do the following:
+    \begin{itemize}
+    \item compute the $\WOTS$ public key $p \gets \WOTSextract(p, \sigma_i)$,
+    \item set $j' \gets \lfloor j / 2^h \rfloor$,
+    \item compute the Merkle root $p \gets \mextract_h(p, j - 2^h j', A_i)$,
+    \item set $j \gets j'$.
+    \end{itemize}
+\item Compute the Merkle root $p \gets \mextract_c(p, j, A_c)$.
+\item The result is $1$ if $p = pk$, and $0$ otherwise.
+\end{itemize}
+
+\subsection{Batch Signature}
+
+$\calS_B$ takes as input a sequence of messages $(M_1, \ldots, M_i) \in \calM^i$ with $0 < i \le 2^b$ and a secret key $sk = (\seed, \salt)$ along with its secret cache, and outputs $i$ signatures $\sigma_j$, computed as follows.
+
+\begin{itemize}
+\item For $j \in \{1, \ldots, i\}$ compute the message digest $m_j \gets H^*(M_j)$.
+\item For $j \in \{i+1, \ldots, 2^b\}$ set $m_j \gets m_1$.
+\item Compute $m \gets \mroot_b(m_1, \ldots, m_{2^b})$.
+\item Compute $\sigma \gets \calS(sk, m)$.
+\item For $j \in \{1, \ldots, i\}$ the $j$-th signature is $\sigma_j \gets (j, \mauth_b(m_1, \ldots, m_{2^b}, j), \sigma)$.
+\end{itemize}
+%
+For $b=0$, we simplify $\calS_B(sk, M)$ to $\calS(sk, H^*(M))$.
+
+\subsection{Batch Verification}
+
+$\calV_B$ takes as input a public key $pk$, a message $M \in \calM$ and a signature $(j, A, \sigma)$, and verifies it as follows.
+
+\begin{itemize}
+\item Compute the message digest $m \gets H^*(M)$.
+\item Compute the Merkle root $m \gets \mextract_b(m, j, A)$.
+\item The result is $\calV(pk, m, \sigma)$.
+\end{itemize}
+%
+For $b=0$, we simplify $\calV_B(pk, M, \sigma)$ to $\calV(pk, H^*(M), \sigma)$.
+
+
+\section{Proposed Instances}
+
+We now propose concrete instances of parameters and primitives for \gravity{}.
+
+\subsection{Parameters}
+
+We propose the following parameters, common to all our proposed instances.
+\begin{itemize}
+\item Hash output $n = 256$ bits, to aim for 128 bits of security for collision-resistance, both classical and quantum.
+\item Winternitz depth $w = 16$, a good trade-off between size and speed often chosen in similar constructions (XMSS, SPHINCS).
+\item A PORS set size $t = 2^{16}$, here again a good trade-off between size and speed chosen in SPHINCS.
+\end{itemize}
+%
+Given these, Table~\ref{tbl:gravity_params} gives the parameters of our three proposed instances:
+\begin{itemize}
+% instance "small"
+\item \textbf{Instance S} produces signatures of at most $\num{12640}$ bytes and provides 128-bit security if no more than $2^{10}$ messages are signed.
+This version is for use cases where a limited number of signatures is issued (firmware signatures, certificate authorities, and so on).
+
+% instance "fast"
+\item \textbf{Instance M} produces signatures of at most $\num{28929}$ bytes and provides 128-bit security if no more than $2^{50}$ messages are signed.
+This version is suitable for most use cases.
+
+% instance "big-fast"
+\item \textbf{Instance L} produces signatures of at most $\num{35168}$ bytes and provides 128-bit security if no more than $2^{64}$ messages are signed.
+This version is for use cases where a single secret key may issue more than $2^{50}$ signatures.
+
+% keygen too slow
+% instance "batching"
+%\item \textbf{Instance B} was designed to sign up to $2^{40}$ \emph{batches} of messages (for example, up to $2^{64}$ messages if a batch includes $2^{24}$ messages). It produces signatures of at most $\num{20032}$ bytes.
+
+\end{itemize}
+If more than the authorized number of messages are signed, then the security level slowly degrades, and may eventually allow attackers to forge signatures efficiently.
+Said forgeries would not be based on the real secret key, however, and could be distinguished from legitimately issued signatures.
+
+
+\begin{table}
+\begin{center}
+\begin{tabular}{c|ccccc|cc|c}
+\toprule
+name      & $\log_2{t}$ & $k$ & $h$ & $d$ & $c$ & sig & sk & capacity \\
+\midrule
+S & 16          &  24 &   5 &   1 &  10 & \num{12640} & 64\,KiB & $2^{10}$ \\
+M & 16          &  32 &   5 &   7 &  15 & \num{28929} & 2\,MiB & $2^{50}$ \\
+L & 16          &  28 &   5 &  10 &  14 & \num{35168} & 1\,MiB & $2^{64}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\caption{Proposed parameters for \gravity{}, suitable for 128 bits of post-quantum security.
+The capacity is the number of messages (or batches of messages) that can be signed per key pair.
+The value under ``sig'' is the maximal signature byte size.
+The value under ``sk'' includes the 64-byte secret key plus the cached data.
+Public keys are always 32-byte.}
+\label{tbl:gravity_params}
+\end{table}
+
+
+\subsection{Primitives}
+\label{sec:primitives}
+
+\subsubsection{Hash Functions}
+
+For the hash functions, we propose to use a 6-round version of Haraka-v2-256 as $F$, and a 6-round version of Haraka-v2-512 as $H$.
+We extend the original Haraka-v2 construction with an additional round, whose constants are the following, computed with the same formula defined in~\cite{haraka}:
+\begin{align*}
+    RC_{40} = \texttt{2ff372380de7d31e367e4778848f2ad2} \\
+    RC_{41} = \texttt{08d95c6acf74be8bee36b135b73bd58f} \\
+    RC_{42} = \texttt{5880f434c9d6ee9866ae1838a3743e4a} \\
+    RC_{43} = \texttt{593023f0aefabd99d0fdf4c79a9369bd} \\
+    RC_{44} = \texttt{329ae3d1eb606e6fa5cc637b6f1ecb2a} \\
+    RC_{45} = \texttt{e00207eb49e01594a4dc93d6cb7594ab} \\
+    RC_{46} = \texttt{1caa0c4ff751c880942366a665208ef8} \\
+    RC_{47} = \texttt{02f7f57fdb2dc1ddbd03239fe3e67e4a}
+\end{align*}
+
+For the general-purpose hash function $H^*$, we propose to use SHA-256, which is a NIST standard and widely available.
+
+
+\subsubsection{Pseudorandom Function}
+
+We propose a construction based on $\AES$ for $G$, valid as long as the parameters verify the constraints $c+dh \le 64$ and $\max(\ell,t) \le 2^{31}$.
+More precisely, given a seed $s \in \Bn$ and an address $a = (i, j, \lambda) \in \calA$, we compute $G(s, a)$ as follows.
+%
+\begin{itemize}
+\item Compute $P_0 \gets \encodeNbits{j}{64} || \encodeNbits{i}{32} || \encodeNbits{2\lambda}{32}$ and $P_1 \gets \encodeNbits{j}{64} || \encodeNbits{i}{32} || \encodeNbits{2\lambda+1}{32}$, where $\encodeNbits{x}{m}$ denotes the (bytewise) big-endian encoding of $x$ as an $m$-bit number.
+\item The result is $\AES(s, P_0) || \AES(s, P_1)$, i.e.\ the encryption of $P_0$ and $P_1$ with key $s$.
+\end{itemize}
+%
+We recall that due to the constraints on $(c, d, h)$, the in-layer index $j$ satisfies $0 \le j < 2^{c+dh} \le 2^{64}$, and the counter $\lambda$ satisfies $2\lambda+1 < 2^{32}$.
+
+This construction is essentially $\AES$ in counter mode, except that we need two AES blocks for a 256-bit result.
+%We use little-endian encoding of the counter $\lambda$ because this allows to use optimized addition arithmetic on processors supporting SSE2 instructions.
+Note that the seed $s$ is the same throughout the hyper-tree, which allows a signer to cache the AES round keys.
+

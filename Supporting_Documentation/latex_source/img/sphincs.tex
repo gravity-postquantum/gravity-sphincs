@@ -1,0 +1,37 @@
+\begin{tikzpicture}
+
+\draw (0,0) -- (-1,-1.5) -- (1,-1.5) -- cycle;
+\draw (0, -1) node {Merkle};
+%
+\draw (0.75,-1.5) -- (0.375,-2) -- (1.125,-2) -- cycle;
+\filldraw (0.375,-2) -- (1.125,-2) -- (1.125,-2.25) -- (0.375,-2.25) -- cycle;
+%
+\draw (-0.75,-1.5) -- (-0.375,-2) -- (-1.125,-2) -- cycle;
+\filldraw (-0.375,-2) -- (-1.125,-2) -- (-1.125,-2.25) -- (-0.375,-2.25) -- cycle;
+%
+\draw (0, -1.75) node {$\ldots$};
+\draw (-0.75, -2.75) node {$\ldots$};
+
+\draw (0.75,-2.25) -- (-0.25,-3.75) -- (1.75,-3.75) -- cycle;
+\draw (0.75, -3.25) node {Merkle};
+%
+\draw (0,-3.75) -- (-0.375,-4.25) -- (0.375,-4.25) -- cycle;
+\filldraw (-0.375,-4.25) -- (0.375,-4.25) -- (0.375,-4.5) -- (-0.375,-4.5) -- cycle;
+%
+\draw (0.75, -4) node {$\ldots$};
+
+\draw (0, -5) node {$\ldots$};
+%
+\draw (0,-5.5) -- (-0.375,-6) -- (0.375,-6) -- cycle;
+\filldraw (-0.375,-6) -- (0.375,-6) -- (0.375,-6.25) -- (-0.375,-6.25) -- cycle;
+%
+\draw (0,-6.25) -- (-1.5,-7.75) -- (1.5,-7.75) -- cycle;
+\draw (0, -7.25) node {PORST};
+
+\draw (-2.5,-2.125) node(WOTS) {WOTS};
+\draw [line] (WOTS.east) -- (-1.125,-2.125);
+\draw [decorate,decoration={brace,amplitude=3mm},xshift=2mm]
+(2,0) -- (2,-6.25) node [midway,anchor=west,xshift=3mm] {Hyper-tree};
+
+\end{tikzpicture}
+

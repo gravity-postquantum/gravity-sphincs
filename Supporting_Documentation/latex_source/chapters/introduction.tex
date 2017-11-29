@@ -1,0 +1,70 @@
+\chapter{Introduction}\label{chap:introduction}
+
+\gravity is a hash-based signature scheme that is a variant of SPHINCS~\cite{sphincs}. Like SPHINCS, \gravity is stateless, as required by NIST.
+
+\gravity brings a number of optimizations and new features to SPHINCS:
+\begin{itemize}
+    \item \textbf{PORS}, a more secure variant of the HORS few-time signature scheme used in SPHINCS.
+    \item \textbf{Secret key caching}, to speed-up signing and reduce signature size.
+    \item \textbf{Batch signing}, to amortize signature time and reduce signature size when signing multiple messages at once.
+    \item \textbf{Mask-less hashing} to reduce the key size and simplify the scheme.
+    \item \textbf{Octopus authentication}, a technique to eliminate redundancies from authentication paths in Merkle trees, and thus reduce signature size.
+\end{itemize}
+
+Detailed analyses related to \gravity are available in~\cite{subsetres,ctrsapaper,masters}.
+
+\section{Advantages and Limitations}
+
+Advantages:
+\begin{itemize}
+
+\item \textbf{High-assurance}: Security essentially depends on the collision resistance of hash functions, an assumption unlikely to fail for the proposed functions. 
+
+\item \textbf{Speed/size trade-offs}: \gravity parameters and secret key caching allow for a range of trade-offs between 1) the key generation and signing time and 2) the size of keys and of signatures.
+
+\item \textbf{Batch signing} allows to reduce the per-message signing time and signature size.
+
+\end{itemize}
+
+Limitations:
+
+\begin{itemize}
+
+\item \textbf{Complexity}: \gravity isn't the simplest signature scheme ever.
+
+\item \textbf{Signature size}: Signatures aren't small (around 20--30\,KiB), but this size remains manageable for many applications.
+
+\end{itemize}
+
+\section{High-Level View}
+
+Like the original SPHINCS, \gravity can be seen as an extension of Goldreich's~\cite[\S6.4.2]{goldreich} constuction of a stateless hash-base signature scheme that is a binary authentication tree of one-time signatures (OTS).
+SPHINCS is essentially Goldreich's construction with the following modifications.
+\begin{enumerate}
+    \item Inner nodes of the tree are not OTSs but \emph{Merkle trees} whose leaves are OTSs, namely Winternitz OTS (WOTS)~\cite{DBLP:conf/crypto/Merkle89,DBLP:conf/africacrypt/Hulsing13} instances. 
+    Thanks to Merkle trees, each node can sign up to $2^x$ children nodes, where $x$ is the height of the Merkle tree.
+    SPHINCS thus uses a tree of trees, or \emph{hyper-tree}. This change increases signing time compared to Goldreich's scheme, because each Merkle tree on the path to a leave needs to be generated for every signature, but reduces the signature size because fewer OTS instances are included in the signature.
+    \item Leaves of the hyper-tree are not OTSs but few-time signature (FTS) schemes. The FTS in SPHINCS is Reyzin–-Reyzin's~\cite{hors} hash-to-obtain-a-random-subset (HORS) construction where public keys are ``compressed'' thanks to a Merkle tree. This variant is called \emph{HORST}, for HORS with trees. Leaves can sign more than one message, which increases the resilience to path collisions, hence reducing the height needed for the hyper-tree.
+\end{enumerate}
+
+Like SPHINCS, \gravity can be described as the combination of four types of trees (see Figure~\ref{fig:sphincs_summary})
+\begin{itemize}
+    
+        \item \textbf{Type 1: The hyper-tree}, whose root is part of the public key. The nodes of this tree are type-2 trees, and its leaves are type-4 trees. 
+    
+        \item \textbf{Type 2: The subtrees}, which are Merkle trees whose leaves are roots of type-3 trees; said roots connect a type-2 tree to another type-2 tree at a lower layer.
+    
+        \item \textbf{Type 3: The WOTS public key compression trees}, which are L-trees (and not necessarily complete binary trees). The leaves of this tree are components of a WOTS public key. The associated WOTS instance signs a type-2 tree's root.
+    
+        \item \textbf{Type 4: The PORST public key compression trees}, at the bottom of the hyper-tree, which are Merkle trees whose root is a compressed representation of the actual PORS public key (that is, the Type-4 tree's leaves).
+
+ \end{itemize}
+
+\begin{figure}[t]
+\centering
+\input{img/sphincs.tex}
+%
+\caption{Sketch of the \gravity construction.}
+\label{fig:sphincs_summary}
+\end{figure}
+

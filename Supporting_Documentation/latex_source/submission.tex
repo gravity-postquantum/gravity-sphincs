@@ -1,0 +1,286 @@
+\documentclass[11pt,a4paper]{report}
+\setcounter{secnumdepth}{3} % default is 2
+\usepackage{amsmath, amsfonts, amssymb, amsthm}
+\usepackage{graphicx}
+\graphicspath{ {img/} }
+\usepackage{xspace}
+\usepackage{color}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage{listings}
+\usepackage[colorlinks=true,citecolor=blue,linkcolor=blue,urlcolor=blue]{hyperref}
+\usepackage{a4wide}
+\usepackage{subcaption}
+\usepackage[utf8]{inputenc}
+\usepackage[noline]{algorithm2e}
+\usepackage{siunitx}
+
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.9}
+
+\usepackage{tikz}
+%% Public TikZ libraries
+\usetikzlibrary{shapes}
+\usetikzlibrary{positioning}
+%% Custom TikZ addons
+\usetikzlibrary{crypto.symbols}
+\tikzset{shadows=no}        % Option: add shadows to XOR, ADD, etc.
+
+
+%\usepackage[sc]{mathpazo}
+\usepackage[default,osfigures,scale=0.95]{opensans}
+\renewcommand*\familydefault{\sfdefault}
+\usepackage[T1]{fontenc}
+
+\usepackage{cmbright}
+\SetSymbolFont{largesymbols}{normal}{OMX}{iwona}{m}{n}
+
+
+\usepackage{titlesec}
+\titleformat{\chapter}
+  {\normalfont\LARGE\bfseries}{\thechapter}{1em}{}
+  \titlespacing*{\chapter}{0pt}{3.5ex plus 1ex minus .2ex}{2.3ex plus
+  .2ex}
+
+\usepackage[nottoc]{tocbibind}
+\usepackage{microtype}
+\usepackage{mathtools}
+
+\usepackage[capitalize]{cleveref}
+
+\crefformat{section}{\S#2#1#3}
+\crefmultiformat{section}{\S\S#2#1#3}{ and~#2#1#3}{, #2#1#3}{, and~#2#1#3}
+
+\hfuzz=3pt
+\setlength\parindent{0pt}
+\setlength{\parskip}{1em}
+\setcounter{tocdepth}{2}
+
+\definecolor{green}{RGB}{0,140,0}
+\definecolor{blue}{RGB}{0,89,153}
+\definecolor{yellow}{RGB}{250,150,0}
+\definecolor{red}{RGB}{255,76,25}
+
+% predefined LaTeX colors
+\newcommand{\tcg}[1]{\textcolor{green}{#1}}
+\newcommand{\tcb}[1]{\textcolor{blue}{#1}}
+\newcommand{\tcr}[1]{\textcolor{red}{#1}}
+\newcommand{\tcy}[1]{\textcolor{yellow}{#1}}
+
+\definecolor{GREEN}{RGB}{204,235,204}
+\definecolor{BLUE}{RGB}{178,201,232}
+\definecolor{RED}{RGB}{232,178,178}
+\definecolor{YELLOW}{RGB}{255,252,204}
+
+\newcommand{\tcng}[1]{\textcolor{GREEN}{#1}}
+\newcommand{\tcnb}[1]{\textcolor{BLUE}{#1}}
+\newcommand{\tcnr}[1]{\textcolor{RED}{#1}}
+\newcommand{\tcny}[1]{\textcolor{YELLOW}{#1}}
+
+
+% abbreviations
+\newcommand\NOT {\texttt{NOT}\xspace}
+\newcommand\OR {\texttt{OR}\xspace}
+\newcommand\AND {\texttt{AND}\xspace}
+\newcommand\XOR {\texttt{XOR}\xspace}
+\newcommand\NAND {\texttt{NAND}\xspace}
+\newcommand\NOR {\texttt{NOR}\xspace}
+\newcommand\TODO{\textbf{TODO}\xspace}
+
+\newcommand{\gravity}{\ensuremath{\textsf{Gravity-SPHINCS}}\xspace}
+\newcommand{\hashx}{\ensuremath{\textsf{Hash}}\xspace}
+\newcommand{\hashy}{\ensuremath{\textsf{Hash32}}\xspace}
+\newcommand{\hashz}{\ensuremath{\textsf{Hash64}}\xspace}
+\newcommand{\drbg}{AES-256-CTR\xspace}
+\newcommand{\sk}{\ensuremath{\mathsf{sk}}\xspace}
+\newcommand{\ek}{\ensuremath{\mathsf{ek}}\xspace}
+\newcommand{\pk}{\ensuremath{\mathsf{pk}}\xspace}
+\newcommand{\sig}{\ensuremath{\mathsf{sig}}\xspace}
+
+\newcommand{\hex}[1]{\texttt{#1}}
+\newcommand{\xhex}[1]{\scalebox{0.75}{\texttt{#1}}}
+
+\newcommand{\NN}{\ensuremath{\mathbb{N}}}
+\newcommand{\FF}{\ensuremath{\mathbb{F}}}
+
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\theoremstyle{plain}
+\newtheorem{lemma}{Lemma}
+\newtheorem{assumption}{Assumption}
+\newtheorem{claim}{Claim}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+
+% Global algorithm2e configs
+\DontPrintSemicolon
+\SetArgSty{rmfamily}
+\SetNlSty{rmfamily}{}{.}
+\SetKwFor{For}{\nl for}{do}{\nl end}
+\SetKwIF{If}{ElseIf}{Else}{\nl if}{then}{\nl elif}{\nl else}{\nl end}%
+\SetKw{Input}{Inputs:}
+\SetKw{Output}{Outputs:}
+\SetKw{Algorithm}{Algorithm:}
+
+\newcommand\Textbox[2]{\parbox[c][\dimexpr#1][c]{1.3em}{\centering#2}}
+
+\newcommand{\getsr}{\overset{\$}{\gets}}
+\newcommand{\encodeNbits}[2]{{\lceil{#1}\rfloor}_{#2}}
+
+\newcommand{\calA}{\mathcal{A}}
+\newcommand{\calD}{\mathcal{D}}
+\newcommand{\calE}{\mathcal{E}}
+\newcommand{\calF}{\mathcal{F}}
+\newcommand{\calG}{\mathcal{G}}
+\newcommand{\calH}{\mathcal{H}}
+\newcommand{\calI}{\mathcal{I}}
+\newcommand{\calK}{\mathcal{K}}
+\newcommand{\calM}{\mathcal{M}}
+\newcommand{\calO}{\mathcal{O}}
+\newcommand{\calP}{\mathcal{P}}
+\newcommand{\calS}{\mathcal{S}}
+\newcommand{\calU}{\mathcal{U}}
+\newcommand{\calV}{\mathcal{V}}
+\newcommand{\calX}{\mathcal{X}}
+\newcommand{\calY}{\mathcal{Y}}
+\newcommand{\calKG}{\mathcal{KG}}
+\newcommand{\calSG}{\mathcal{SG}}
+\newcommand{\calSK}{\mathcal{SK}}
+\newcommand{\calPK}{\mathcal{PK}}
+
+\newcommand{\Bn}{B_n}
+\newcommand{\Boxsf}{\textsf{Box}}
+
+\newcommand{\hla}[1]{\textcolor{red}{#1}}
+\newcommand{\hlb}[1]{\textcolor{blue}{#1}}
+\newcommand{\hlc}[1]{\textcolor{green!50!black}{#1}}
+\newcommand{\ul}[1]{\underline{#1}}
+
+
+\DeclareRobustCommand{\stirling}{\genfrac\{\}{0pt}{}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\Sec}{\textbf{Sec}}
+\newcommand{\Prb}[1]{\textsf{Pr}[{#1}]}
+\newcommand{\Prob}[2]{\Prb{{#1}\Rightarrow{#2}}}
+\newcommand{\Probgiven}[3]{\Prb{{#1}\Rightarrow{#2} |{#3}}}
+\newcommand{\Probsetbad}[1]{\Prb{{#1}\text{ sets }\bad}}
+\newcommand{\Pgreedy}[1]{P_\textsf{Greedy}^{k,t} ({#1})}
+\newcommand{\PgreedyNaive}[1]{P_\textsf{GreedyNaive}^{k,t} ({#1})}
+\newcommand{\PgreedyOptim}[1]{P_\textsf{GreedyOptim}^{k,t} ({#1})}
+\newcommand{\Succ}[3]{\textsc{Succ}^{#1}_{#2} ({#3})}
+\newcommand{\InSec}[3]{\textsc{InSec}^{#1} ({#2}; {#3})}
+\newcommand{\game}[3]{{#1}^{#2}_{#3}}
+\newcommand{\adversary}{\mathcal{A}}
+\newcommand{\adversaryB}{\mathcal{B}}
+\newcommand{\adversaryC}{\mathcal{C}}
+\newcommand{\adversaryD}{\mathcal{D}}
+
+\newcommand{\RUN}[1]{\underline{Run #1}}
+\newcommand{\INIT}{\textbf{Initialize}}
+\newcommand{\FINAL}{\textbf{Finalize}}
+\newcommand{\GenKey}{\textbf{GenKey}}
+\newcommand{\GenPrivKey}{\textbf{GenPrivKey}}
+\newcommand{\Sign}{\textbf{Sign}}
+\newcommand{\Verify}{\textbf{Verify}}
+\newcommand{\On}[2]{On {#1} of {#2}}
+\newcommand{\OnQuery}[2]{\On{query {#1}}{#2}}
+
+\newcommand{\bad}{\textsf{bad}}
+\newcommand{\win}{\textsf{win}}
+\newcommand{\found}{\textsf{found}}
+\newcommand{\preimg}{\textsf{preimg}}
+\newcommand{\coll}{\textsf{collision}}
+\newcommand{\ltree}{\textsf{L-tree}}
+\newcommand{\mtree}{\textsf{Merkle-tree}}
+\newcommand{\mroot}{\textsf{Merkle-root}}
+\newcommand{\mauth}{\textsf{Merkle-auth}}
+\newcommand{\mextract}{\textsf{Merkle-extract}}
+\newcommand{\WOTSgen}{\textsf{WOTS-genpk}}
+\newcommand{\WOTSsign}{\textsf{WOTS-sign}}
+\newcommand{\WOTSextract}{\textsf{WOTS-extractpk}}
+\newcommand{\PORSsf}{\textsf{PORS}}
+\newcommand{\PORSTsign}{\textsf{PORST-sign}}
+\newcommand{\PORSTextract}{\textsf{PORST-extractpk}}
+\newcommand{\octauth}{\textsf{Octopus-auth}}
+\newcommand{\octextract}{\textsf{Octopus-extract}}
+\newcommand{\octlayer}{\textsf{Octopus-layer}}
+\newcommand{\hash}{\textsf{hash}}
+\newcommand{\chksum}{\textsf{checksummed}}
+\newcommand{\splt}{\textsf{split}}
+\newcommand{\mkaddr}{\textsf{make-addr}}
+\newcommand{\incaddr}{\textsf{incr-addr}}
+\newcommand{\substr}{\textsf{substr}}
+\newcommand{\sorted}{\textsf{sorted}}
+\newcommand{\unique}{\textsf{unique}}
+\newcommand{\salt}{\textsf{salt}}
+\newcommand{\seed}{\textsf{seed}}
+\newcommand{\sigsz}{\textsf{sigsz}}
+\newcommand{\PROC}{\textbf{proc~}}
+\newcommand{\IF}{\textbf{if~}}
+\newcommand{\THEN}{\textbf{~then~}}
+\newcommand{\RTHEN}{\textbf{~then}}
+\newcommand{\LTHEN}{\textbf{then~}}
+\newcommand{\ELSE}{\textbf{else}}
+\newcommand{\ABORT}{\textbf{abort}}
+\newcommand{\FOR}{\textbf{for~}}
+\newcommand{\TO}{\textbf{~to~}}
+\newcommand{\DOWNTO}{\textbf{~down~to~}}
+\newcommand{\WHILE}{\textbf{while~}}
+\newcommand{\DO}{\textbf{~do~}}
+\newcommand{\RETURN}{\textbf{return~}}
+\newcommand{\RETURNTO}[2]{\textbf{return~}{#1}\textbf{~to~}{#2}}
+\newcommand{\OUTPUT}{\textbf{output~}}
+\newcommand{\INDENT}{\mbox{}~~~~}
+
+\newcommand{\EUCMA}{\textsc{EU-CMA}}
+\newcommand{\SUCMA}{\textsc{SU-CMA}}
+\newcommand{\OTS}{\textsc{OTS}}
+\newcommand{\WOTS}{\textsc{WOTS}}
+\newcommand{\LWOTS}{\textsc{LWOTS}}
+\newcommand{\ORSsf}{\textsf{ORS}}
+\newcommand{\ORS}{\textsc{ORS}}
+\newcommand{\ORSS}{\textsc{ORSS}}
+\newcommand{\ORST}{\textsc{ORST}}
+\newcommand{\HORS}{\textsc{HORS}}
+\newcommand{\HORST}{\textsc{HORST}}
+\newcommand{\PORS}{\textsc{PORS}}
+\newcommand{\PORST}{\textsc{PORST}}
+\newcommand{\MT}{\textsc{MT}}
+\newcommand{\BATCH}{\textsc{BATCH}}
+\newcommand{\OW}{\textsc{OW}}
+\newcommand{\SPR}{\textsc{SPR}}
+\newcommand{\CR}{\textsc{CR}}
+\newcommand{\UD}{\textsc{UD}}
+\newcommand{\PRF}{\textsc{PRF}}
+\newcommand{\SEED}{\textsc{SEED}}
+\newcommand{\SR}{\textsc{SR}}
+\newcommand{\TSR}{\textsc{TSR}}
+\newcommand{\NASR}{\textsc{NASR}}
+\newcommand{\AES}{\textsc{AES-256}}
+
+
+
+\begin{document}
+
+\input{chapters/firstpage}
+
+\tableofcontents
+\newpage
+
+\input{chapters/introduction}
+\input{chapters/specification}
+\input{chapters/security}
+\input{chapters/performance}
+
+\bibliographystyle{plainurl}
+\bibliography{bib}
+
+\end{document}

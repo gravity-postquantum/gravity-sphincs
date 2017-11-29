@@ -1,0 +1,3 @@
+gen_ivs
+*.o
+*.dSYM

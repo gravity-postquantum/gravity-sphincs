@@ -1,0 +1,26 @@
+\chapter{Security}\label{chap:security}
+
+The security of \gravity{} relies on the collision resistance of $F$, $H$, $H^*$, on the undetectability and one-wayness of $F$, and on the pseudo-randomness of $G$.
+Security reductions in~\cite[Ch.6]{masters} give lower bounds on the complexity of attacks.
+We now describe some concrete attack strategies and \gravity's expected strength against them:
+
+\begin{itemize}
+
+\item \textbf{Find two messages that collide for $H^*$}, because their signatures would be identical.
+A generic birthday attack has a complexity of 128 bits for $n=256$.
+
+\item \textbf{Break the non-adaptive subset-resilience of $G$.}
+Here again, our choices of parameters guarantee a complexity of at least 128 bits for known generic attacks, see~\cite{subsetres} or~\cite[Ch.4]{masters}. 
+
+\item \textbf{Exploit a collision in $\WOTS$ or $\PORST$ instances}: if two secret values (in any of the $\WOTS$ and $\PORST$ instances) are identical, knowing one allows to forge another.
+With $n=256$, this gives 128 bits of security if the secret values are chosen independently and uniformly.
+However, our construction with $\AES$ guarantees that all secret values are distinct throughout the construction, because $G$ is in fact a permutation.
+
+\end{itemize}
+These security estimates hold both against classical and quantum attacks.
+
+This security level corresponds to NIST's category 2 (find a collision for a 256-bit hash).
+
+
+
+

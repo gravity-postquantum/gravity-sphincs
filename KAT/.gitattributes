@@ -1,0 +1,4 @@
+PQCsignKAT_1048608.rsp.gz filter=lfs diff=lfs merge=lfs
+PQCsignKAT_2097184.rsp.gz filter=lfs diff=lfs merge=lfs
+PQCsignKAT_65568.rsp.gz filter=lfs diff=lfs merge=lfs
+PQCsignKAT_all.req filter=lfs diff=lfs merge=lfs -text

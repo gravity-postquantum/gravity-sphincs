@@ -1,0 +1,165 @@
+\usetikzlibrary{arrows}			%% Include regular arrows
+\usepgflibrary{arrows.new}		%% Include custom arrows
+\usetikzlibrary{shadows.blur}	%% Include the package to add shadows
+
+%%
+%% XOR in TIKZ
+%%
+\tikzset{XOR/.style={thick,
+					draw,
+					circle,
+					append after command={
+					        [shorten >=\pgflinewidth, shorten <=\pgflinewidth,]
+					        (\tikzlastnode.north) edge[thick] (\tikzlastnode.south)
+					        (\tikzlastnode.east) edge[thick] (\tikzlastnode.west)
+        				},
+    				},
+}
+
+%%
+%% ADD in TIKZ
+%%
+\tikzset{ADD/.style={thick,
+					draw,
+					rectangle,
+					append after command={
+					        [shorten >=\pgflinewidth, shorten <=\pgflinewidth,]
+					        (\tikzlastnode.north) edge[thick] (\tikzlastnode.south)
+					        (\tikzlastnode.east) edge[thick] (\tikzlastnode.west)
+				        },
+				    },
+}
+
+%%
+%% MOD ADD in TIKZ
+%%
+\tikzset{MODADD/.style={thick,
+						draw,
+						rectangle,
+						append after command={
+								[shorten >=\pgflinewidth, shorten <=\pgflinewidth,]
+								(\tikzlastnode.north) edge[thick] (\tikzlastnode.south)
+								(\tikzlastnode.east) edge[thick] (\tikzlastnode.west)
+							},
+						},
+}
+
+%%% Shadows
+\tikzset{
+		%% XOR node
+		shadows/.is choice,
+		shadows/yes/.style={
+			XOR/.append style={fill=white,blur shadow={shadow blur steps=5}},
+			ADD/.append style={blur shadow={shadow blur steps=5}},
+			MODADD/.append style={fill=white,blur shadow={shadow blur steps=5}}
+		},
+		shadows/no/.style={
+		},
+		%% Default: no shadows
+		shadows = no,
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%% AUTHENTICATED ENCRYPTION %%%%%%%%%%%%%%%%%%%%
+
+%%
+%% AE: Message block
+%%
+\tikzset{AE_msg/.style={
+		rectangle,
+		thick,
+		draw,
+		fill=blue!20,
+		text width=1cm,
+		minimum height=0.5cm,
+		text centered,
+		anchor=north,
+	}
+}
+
+%%
+%% AE: Ciphertext block
+%%
+\tikzset{AE_ctx/.style={
+		rectangle,
+		thick,
+		draw,
+		fill=green!20,
+		text width=1cm, 
+		minimum height=0.5cm,
+		text centered,
+		anchor=north,
+	}
+}
+
+%%
+%% AE: Tag block
+%%
+\tikzset{AE_tag/.style={
+		rectangle,
+		thick,
+		draw,
+		fill=red!20,
+		text width=1cm, 
+		minimum height=0.5cm,
+		text centered,
+		anchor=north,
+	}
+}
+
+%%
+%% AE: Block cipher call
+%%
+\tikzset{AE_E/.style={
+		rectangle,
+		thick,
+		draw,
+		fill=yellow!20,
+		text width=1cm, 
+		minimum height=1cm,
+		text centered,
+		anchor=north,
+	}	
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%% Custom lines or arrows %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\tikzset{edge/.style={
+						-latex new, 
+						arrow head=8pt, 
+						thick
+					},
+}
+
+\tikzset{line/.style={
+						thick,
+						draw, 
+						-latex',
+						shorten <=1bp,
+						shorten >=1bp,
+					}
+}
+
+\tikzset{doublearrow/.style={
+								thick,
+								draw, 
+								latex-latex,
+								shorten <=1bp,
+								shorten >=1bp
+							}
+}
+
+\tikzset{edgee/.style={
+						latex new-latex new, 
+						arrow head=8pt, 
+						thick,
+						}
+}
+
+\tikzset{Redge/.style={
+						latex new-, 
+						arrow head=8pt, 
+						thick,
+						}
+}
+

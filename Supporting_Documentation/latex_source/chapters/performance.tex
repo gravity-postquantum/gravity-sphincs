@@ -1,0 +1,197 @@
+\chapter{Performance}\label{chap:performance}
+
+We now describe optimization techniques to implement \gravity{} efficiently.
+
+\section{Primitives}
+
+We can first apply optimizations specific to the chosen primitives.
+
+\subsection{Caching of AES Round Keys}
+
+To generate secret values with $G$, the same $\seed$ is used throughout the construction.
+With our implementation based on $\AES$ in counter mode, this seed is the AES key.
+To avoid recomputing them for each block, we can cache the AES round keys throughout the scheme.
+
+\subsection{Haraka Pipelining}
+
+The Haraka hash function~\cite{haraka} was designed to support parallel computation on several inputs for CPUs supporting optimized instructions, e.g.\ Intel's Haswell and Skylake micro-architectures.
+Typically, a CPU core can evaluate Haraka on 4 to 8 inputs at the same time, depending on the micro-architecture.
+Hence, careful scheduling of hash evaluations is a way to improve the speed of \gravity{}.
+
+In particular, the $\WOTS$ construction uses many long chains of hashes.
+A naive implementation evaluates the chains one after another, which does not leverage 4-way (or 8-way) hashing.
+On the other end, a more clever implementation evaluates the chains level by level, using the pipelined versions of Haraka.
+Likewise, Merkle trees can be compressed level by level.
+
+An even more efficient strategy is to fully compute the first 4 chains (using 4-way Haraka), then the next 4 chains, and so on.
+Indeed, this avoids expensive loads and stores between CPU registers and the rest of the memory.
+This is even more effective for mask-less constructions, because there is no need to load a mask from memory after each iteration.
+We improved the optimized Haraka implementation\footnote{Available at \url{https://github.com/kste/haraka}} to support computation of mask-less hash chains, removing useless store and load instructions at each iteration.
+This proved to be the most efficient strategy.
+
+\subsection{AES-NI}
+
+Gravity-SPHINCS spends most of its time computing Haraka hashes, that is, AES rounds (plus some mixing operations).
+AES-NIs, now available in most mainstream processors, are mandatory to achieve tolerable speeds, for they make AES rounds orders of magnitude faster than with dedicated implementations.
+
+On Skylake CPUs, the AES round instruction AESENC has a latency of four cycles and a reciprocal throughput of one.
+In \gravity, many AES rounds can be pipelined in order to maximize the effective throughput and return one AESENC result per cycle: Haraka-512 computes up to four independent AES rounds, and rounds within four AES-256-CTR instances can be interleaved.
+
+These independent AES round instances can't really be parallelized on current microarchitectures that have a single AES unit.
+But AMD's new Ryzen CPUs have two AES units, and Intel is expected to follow in future microarchitectures versions and include two AES units as well.
+
+Our optimized implementation thus includes 4-way and 8-way interleaved versions of Haraka for computing the trees and its leaves\footnote{Based on Haraka's authors code at \url{https://github.com/kste/haraka/}, with a few optimizations and bug fixes.}, as well as 4-way interleaved AES-256-CTR.
+
+Furthermore, future Intel microarchitectures (from Ice Lake) will include VAES (vector AES) instructions, which will compute four AES rounds simultaneously within a ZMM register.
+This will further speed-up Haraka-based hashing.
+
+
+\section{Secret Cache}\label{sec:caching}
+
+As analyzed in~\cite{ctrsapaper}, the top levels of the root Merkle tree can be cached by the signer, as they are shared among all signatures.
+In particular, given the threshold $c$, the $2^c$ hash values at level $c$ can be cached with $2^c n$ bits of memory.
+Further, the levels above it total only $2^c-1$ additional hash values, so a good strategy is to save all values from levels 0 to $c$, with $(2^{c+1}-1)n$ bits of memory.
+For our sets of parameters proposed in Table~\ref{tbl:gravity_params}, this represents 16~KiB to 2~MiB of secret cache.
+
+\section{Multithreading}
+
+To reduce signature size, the slower versions of \gravity{} use larger Merkle trees, at the expense of key generation and signing times.
+To reduce the latency of these operations, we can leverage multithreading, especially in Merkle trees.
+Indeed, computing the root of a Merkle tree of height $h$ can be distributed among $2^\tau$ threads as follows: split the tree into $2^\tau$ subtrees of height $h-\tau$ (starting from the leaves), compute each subtree in a different thread, and then compute the top $\tau$ layers in a single thread.
+The latency of this computation is now in the order of $2^{h-\tau} + 2^\tau$, instead of $2^h$.
+
+This strategy is especially relevant in a batching context: instead of computing many independent signatures in parallel the signer computes a single signature, which means that many parallel threads of computation are available for one signature.
+
+
+\section{Cost Estimation}\label{sec:cost}
+
+We estimate the cost of each operation (key generation, signing and verification) in terms of function calls.
+We let aside calls to the general-purpose hash function $H^*$, whose performance depends on the length of the message being signed.
+
+\paragraph{Key Generation}
+We compute the top Merkle tree:
+\begin{itemize}
+\item $2^{c+h} \ell$ calls to $G$ to generate the $\WOTS$ secret values,
+\item $2^{c+h} \ell (w-1)$ calls to $F$ to evaluate $\WOTS$ chains,
+\item $2^{c+h}-1$ calls to $H$ to compress the Merkle tree.
+\end{itemize}
+The bottleneck is the evaluation of $\WOTS$ hash chains.
+
+\paragraph{Signing}
+Assuming that the top $c$ levels of the hyper-tree are cached, we compute a $\PORST$ signature and $d$ Merkle trees:
+\begin{itemize}
+\item $2$ calls to $H$ and a few calls to $G$ to obtain the random subset of $\PORST$,
+\item $t$ calls to $G$ to generate the $\PORST$ secret values,
+\item $t-1$ calls to $H$ to compress the $\PORST$ tree,
+\item $d 2^h \ell$ calls to $G$ to generate the $\WOTS$ secret values,
+\item $\le d 2^h \ell (w-1)$ calls to $F$ to evaluate partial $\WOTS$ chains,
+\item $d (2^h-1)$ calls to $H$ to compress the $d$ Merkle trees.
+\end{itemize}
+Here again the bottleneck is the evaluation of many $\WOTS$ hash chains.
+
+\paragraph{Verification}
+We verify a $\PORST$ instance and $d$ Merkle trees:
+\begin{itemize}
+\item $1$ call to $H$ and a few calls to $G$ to obtain the random subset of $\PORST$,
+\item $k$ calls to $F$ to compute $\PORST$ public values,
+\item $\le k(\log_2{t} - \lfloor \log_2{k} \rfloor)$ calls to $H$ to compress octopus authentication nodes,
+\item $\le d \ell (w-1)$ calls to $F$ to evaluate partial $\WOTS$ chains,
+\item $c + dh$ calls to $H$ to compress Merkle authentication paths.
+\end{itemize}
+The bottleneck is again the evaluation of $\WOTS$ hash chains, but verification is much faster than signing and key generation.
+
+
+\section{Benchmarks}
+
+We measured the execution time of the three operations---key generation, sign, verify---for each of the three proposed instances.
+It doesn't make much sense to count CPU cycles here since all operations are relatively slow, and signing/verification do a different number of operations depending on the message signed anyway.
+So we measure the wall time, reported here in microseconds on an Intel Core i5-6360U CPU @ 2.00\,GHz.
+
+The measurements below are directly copied from executions of our \texttt{bench} program, included in the source code published.
+We measured three rounds of sign--verify, to show the variability of the measured time.
+
+Version S:
+{
+\footnotesize
+\begin{verbatim}
+    # crypto_sign_keypair
+    390823.00 usec
+    
+    # crypto_sign
+    5982.00 usec
+    
+    # crypto_sign_open
+    52.00 usec
+    
+    # crypto_sign
+    4222.00 usec
+    
+    # crypto_sign_open
+    32.00 usec
+    
+    # crypto_sign
+    4118.00 usec
+    
+    # crypto_sign_open
+    35.00 usec
+\end{verbatim}
+}
+
+Version M:
+{
+\footnotesize
+\begin{verbatim}
+    # crypto_sign_keypair
+    12114856.00 usec
+    
+    # crypto_sign
+    9450.00 usec
+    
+    # crypto_sign_open
+    126.00 usec
+    
+    # crypto_sign
+    5920.00 usec
+    
+    # crypto_sign_open
+    116.00 usec
+    
+    # crypto_sign
+    6752.00 usec
+    
+    # crypto_sign_open
+    115.00 usec
+\end{verbatim}
+}
+
+Version L:
+{
+\footnotesize
+\begin{verbatim}
+    # crypto_sign_keypair
+    5894540.00 usec
+    
+    # crypto_sign
+    10527.00 usec
+    
+    # crypto_sign_open
+    169.00 usec
+    
+    # crypto_sign
+    6744.00 usec
+    
+    # crypto_sign_open
+    175.00 usec
+    
+    # crypto_sign
+    8087.00 usec
+    
+    # crypto_sign_open
+    162.00 usec
+\end{verbatim}
+}
+
+As expected from the theoretical estimates in~\S\ref{sec:cost}, key generation is super slow, while signing is a few milliseconds and verification is sub-millisecond.
+A very rough estimate of the CPU cycles count is obtained by multiplying the microsecond figures by 2000, since 2000 cycles are elapsed within a microsecond, at the CPU's nominal frequency (but note that we didn't disable Turbo Boost).
+
+When CPUs include two AES units instead of one, Gravity-SPHINCS will be at most twice as fast, since most of the time is spent computing AES rounds.
