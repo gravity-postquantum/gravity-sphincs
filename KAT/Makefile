@@ -1,5 +1,5 @@
 BIN=nist_kats
-SRCPATH=../Reference_Implementation
+SRCPATH=../Additional_Implementations/fast/
 SRC_FILES=$(wildcard $(SRCPATH)/*.c) $(wildcard $(SRCPATH)/primitives/*.c) 
 SRC=$(filter-out $(SRCPATH)/randombytes.c $(SRCPATH)/bench.c, $(SRC_FILES))
 SRC+=PQCgenKAT_sign.c rng.c
