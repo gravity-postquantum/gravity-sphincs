@@ -1,6 +1,7 @@
 SRC=$(wildcard *.c) $(wildcard primitives/*.c) 
 OBJ=$(patsubst %.c, %.o, $(SRC))
 IVSFILE=IntermediateValues.txt
+BIN=gen_ivs
 
 
 CFLAGS_COMMON=-std=c89 -pedantic -Wall -Wextra -Wno-long-long -march=native
@@ -33,14 +34,14 @@ help:
 			@echo "\tivs\t\t generates intermediate values"
 
 check:		$(SRC) $(IVSFILE)
-			@$(CC) $(CFLAGS) $(LDFLAGS) -DDEBUG $(SRC) -o gen_ivs
+			@$(CC) $(CFLAGS) $(LDFLAGS) -DDEBUG $(SRC) -o $(BIN)
 			@./gen_ivs > $(IVSFILE)_tmp
 			@diff $(IVSFILE) $(IVSFILE)_tmp ; if [ $$? -ne 0 ] ; then echo "error" ; else echo "ok" ; fi
 			@rm -f $(IVSFILE)_tmp
 
 ivs:		$(SRC) gen_ivs.c
-			$(CC) $(CFLAGS) $(LDFLAGS) -DDEBUG $^ -o gen_ivs
-			./gen_ivs > $(IVSFILE)
+			$(CC) $(CFLAGS) $(LDFLAGS) -DDEBUG $^ -o $(BIN)
+			./$(BIN) > $(IVSFILE)
 
 format: 
 			clang-format -i *.c *.h
@@ -55,7 +56,7 @@ cloc:
 			cloc $(wildcard *.c) $(wildcard *.h)
 
 clean:
-			rm -f bench *.dSYM 
+			rm -f $(BIN) *.dSYM 
 
-.PHONY: clean format analyze cloc bench
+.PHONY: clean format analyze cloc 
 
