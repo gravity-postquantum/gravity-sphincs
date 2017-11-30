@@ -70,6 +70,8 @@ int crypto_sign (unsigned char *sm,
 
     memcpy ((void *)&sk_str, sk, sizeof (struct gravity_sk));
 
+    memset ((uint8_t *)(&sig), 0, sizeof (struct gravity_sign));
+
     ret = gravity_sign (&sk_str, &sig, &msg);
 
     if (ret != GRAVITY_OK) return ret;
