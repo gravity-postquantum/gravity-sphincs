@@ -23,6 +23,7 @@ void wots_gensk (const struct hash *key, const struct address *address, struct w
 
 void wots_sign (const struct wots_sk *sk, struct wots_sign *sign, const struct hash *msg);
 
+
 /* WOTS with L-tree and without masks */
 struct lwots_pk {
     struct hash k;

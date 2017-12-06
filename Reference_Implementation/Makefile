@@ -1,4 +1,4 @@
-SRC=$(wildcard *.c) $(wildcard primitives/*.c) 
+SRC=$(wildcard *.c) $(wildcard primitives/*.c)
 OBJ=$(patsubst %.c, %.o, $(SRC))
 
 CFLAGS_COMMON=-std=c89 -pedantic -Wall -Wextra -Wno-long-long -march=native
@@ -6,7 +6,7 @@ LDFLAGS=-lcrypto
 
 VERSION_S= -DPORS_k=24 -DMERKLE_h=5  -DGRAVITY_d=1  -DGRAVITY_c=10
 VERSION_M= -DPORS_k=32 -DMERKLE_h=5  -DGRAVITY_d=7  -DGRAVITY_c=15
-VERSION_L= -DPORS_k=28 -DMERKLE_h=5  -DGRAVITY_d=10 -DGRAVITY_c=14 
+VERSION_L= -DPORS_k=28 -DMERKLE_h=5  -DGRAVITY_d=10 -DGRAVITY_c=14
 
 VERSION=$(VERSION_S)
 
@@ -16,7 +16,7 @@ CFLAGS_SANITIZED=$(CFLAGS_COMMON) -fsanitize=address,undefined -g
 
 KERNEL_NAME := $(shell uname -s)
 ifeq ($(KERNEL_NAME), Darwin)
-	CFLAGS += -I/usr/local/opt/openssl/include 
+	CFLAGS += -I/usr/local/opt/openssl/include
 	LDFLAGS += -L/usr/local/opt/openssl/lib
 endif
 
@@ -33,7 +33,7 @@ bench:		$(SRC)
 			$(CC) $(CFLAGS) $(LDFLAGS) $^ -o bench
 			./bench
 
-format: 
+format:
 			clang-format -i *.c *.h
 
 analyze:
@@ -42,11 +42,11 @@ analyze:
 			cppclean .
 			rm -f *.o
 
-cloc:		
+cloc:
 			cloc $(wildcard *.c) $(wildcard *.h)
 
 clean:
-			rm -f bench *.dSYM 
+			rm -f bench *.dSYM *.o
 
 .PHONY: clean format analyze cloc bench
 

@@ -27,6 +27,7 @@ void merkle_extract (struct merkle_pk *pk,
                      const struct merkle_sign *sign,
                      const struct hash *msg);
 
+
 /* Helper functions */
 /* Alloc/free a buffer large enough to store leaves and compress them */
 struct hash *merkle_alloc_buf (int height);

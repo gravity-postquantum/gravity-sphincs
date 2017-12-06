@@ -93,6 +93,7 @@ void merkle_extract (struct merkle_pk *pk,
     hashcpy (&pk->k, &wpk.k);
 }
 
+
 /* Helper functions */
 /* Alloc/free a buffer large enough to store leaves and compress them */
 struct hash *merkle_alloc_buf (int height) {

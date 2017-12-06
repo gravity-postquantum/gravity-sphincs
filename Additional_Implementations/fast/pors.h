@@ -15,6 +15,7 @@ void pors_randsubset (const struct hash *rand,
                       uint64_t *address,
                       struct pors_subset *subset);
 
+
 /* Naive PORS without Merkle tree */
 struct pors_sk {
     struct hash k[PORS_t];
@@ -37,6 +38,7 @@ void pors_gensk (const struct hash *key, const struct address *address, struct p
 
 void pors_sign (const struct pors_sk *sk, struct pors_sign *sign, const struct pors_subset *subset);
 
+
 /* Naive PORST without merging of authentication paths */
 struct porst_pk {
     struct hash k;
@@ -48,6 +50,7 @@ struct porst_keypair {
 };
 
 int porst_genpk (const struct pors_sk *sk, struct porst_pk *pk);
+
 
 /* PORST with authentication octopus */
 struct octoporst_sign {

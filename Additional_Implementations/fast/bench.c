@@ -16,6 +16,7 @@
 #define N 32
 #define ROUNDS 3
 
+
 int main () {
 
     unsigned long long smlen;
@@ -75,6 +76,7 @@ int main () {
 
         MEASURE ("crypto_sign");
         gettimeofday (&tm1, NULL);
+
 
         if (crypto_sign_open (m, &mlen, sm, smlen, pk)) {
             fprintf (stderr, "error: crypto_sign_open failed\n");

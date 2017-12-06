@@ -18,6 +18,7 @@ struct address {
     uint32_t layer;
 };
 
+
 void hash_N_to_N (struct hash *dst, const struct hash *src);
 void hash_N_to_N_chain (struct hash *dst, const struct hash *src, int chainlen);
 void hash_2N_to_N (struct hash *dst, const struct hash *src);
@@ -31,6 +32,7 @@ void hash_compress_all (struct hash *dst, const struct hash *src, int count);
 void hash_parallel (struct hash *dst, const struct hash *src, int count);
 /* Compute count hash chains of length chainlen in parallel */
 void hash_parallel_chains (struct hash *dst, const struct hash *src, int count, int chainlen);
+
 
 /* int hashcmp(const struct hash *a, const struct hash *b); */
 #define hashcmp(a, b) memcmp ((a)->h, (b)->h, HASH_SIZE)

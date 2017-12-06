@@ -4,6 +4,7 @@
 #include "gravity.h"
 #include "randombytes.h"
 
+
 int crypto_sign_keypair (unsigned char *pk, unsigned char *sk) {
 
     struct gravity_sk sk_str;

@@ -43,6 +43,7 @@ void pors_sign (const struct pors_sk *sk, struct pors_sign *sign, const struct p
     }
 }
 
+
 /* Naive PORST without merging of authentication paths */
 int porst_genpk (const struct pors_sk *sk, struct porst_pk *pk) {
     struct hash *buf = merkle_alloc_buf (PORS_tau);
@@ -57,6 +58,7 @@ int porst_genpk (const struct pors_sk *sk, struct porst_pk *pk) {
     merkle_free_buf (buf);
     return GRAVITY_OK;
 }
+
 
 /* PORST with authentication octopus */
 void sort_subset (struct pors_subset *subset) {
@@ -125,6 +127,7 @@ int octoporst_extract (struct porst_pk *pk,
     return GRAVITY_OK;
 }
 
+
 int octoporst_loadsign (struct octoporst_sign *sign, const uint8_t *_sign, size_t _len) {
     if (_len < sizeof (struct pors_sign)) return GRAVITY_ERR_VERIF;
     _len -= sizeof (struct pors_sign);
@@ -150,6 +153,7 @@ int octoporst_signcmp (const struct octoporst_sign *sign1,
 
     return 0;
 }
+
 
 void pors_randsubset (const struct hash *rand,
                       const struct hash *msg,

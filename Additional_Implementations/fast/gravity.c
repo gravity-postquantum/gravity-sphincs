@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
 int gravity_gensk (struct gravity_sk *sk) {
     int n = GRAVITY_ccc;
     struct hash *src;

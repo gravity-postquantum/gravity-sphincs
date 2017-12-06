@@ -58,6 +58,7 @@ void wots_sign (const struct wots_sk *sk, struct wots_sign *sign, const struct h
     }
 }
 
+
 /* WOTS with L-tree and without masks */
 void lwots_ltree (const struct wots_pk *pk, struct lwots_pk *root) {
     struct hash buf[2 * WOTS_ell];
